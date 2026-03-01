@@ -1,22 +1,37 @@
-"""
-URL configuration for tfz_backend project.
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from main import views
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
-from django.contrib import admin
-from django.urls import path
+router = DefaultRouter()
+router.register(r"worker-profiles", views.WorkerProfileViewSet, basename="worker-profile")
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    # swagger
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/schema/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/schema/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+
+    # аутентификация
+    path("api/auth/login/", views.loginView, name="login"),
+    path("api/auth/logout/", views.logoutView, name="logout"),
+    path("api/auth/refresh/", views.CookieTokenRefreshView.as_view(), name="token-refresh"),
+    path("api/auth/me/", views.current_user_view, name="current-user"),
+
+    # регистрация
+    path("api/auth/register/worker/", views.WorkerRegisterView.as_view(), name="register-worker"),
+    path("api/auth/register/admin/", views.AdminRegisterView.as_view(), name="register-admin"),
+    path("api/auth/register/superadmin/", views.SuperAdminRegisterView.as_view(), name="register-superadmin"),
+
+    # профили сотрудников
+    path("api/", include(router.urls)),
+
+    # пациенты
+    path("api/patients/", views.PatientListCreateView.as_view(), name="patient-list-create"),
+    path("api/patients/<int:pk>/", views.PatientDetailView.as_view(), name="patient-detail"),
+
+    # расчёты
+    path("api/patients/<int:patient_id>/calculate/", views.calculate_view, name="calculate"),
+    path("api/patients/<int:patient_id>/calculations/", views.PatientCalculationHistoryView.as_view(), name="patient-calculations"),
+    path("api/calculations/<int:pk>/", views.CalculationDetailView.as_view(), name="calculation-detail"),
 ]
