@@ -122,8 +122,6 @@ class PatientSerializer(serializers.ModelSerializer):
 class CalculateRequestSerializer(serializers.Serializer):
     MODE_CHOICES = [("dtz", "ДТЗ"), ("mtz", "МТЗ")]
     mode = serializers.ChoiceField(choices=MODE_CHOICES)
-    age = serializers.IntegerField(min_value=1, max_value=120)
-    gender = serializers.ChoiceField(choices=MODE_CHOICES)
     st4 = serializers.FloatField(min_value=0.01)
     ttg = serializers.FloatField(min_value=0.001)
     atrttg = serializers.FloatField(min_value=0.01)
