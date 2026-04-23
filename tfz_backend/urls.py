@@ -16,7 +16,7 @@ urlpatterns = [
     path("api/auth/login/", views.loginView, name="login"),
     path("api/auth/logout/", views.logoutView, name="logout"),
     path("api/auth/refresh/", views.CookieTokenRefreshView.as_view(), name="token-refresh"),
-    path("api/auth/me/", views.current_user_view, name="current-user"),
+    path("api/profile/", views.current_user_view, name="current-user"),
 
     # регистрация
     path("api/auth/register/worker/", views.WorkerRegisterView.as_view(), name="register-worker"),
