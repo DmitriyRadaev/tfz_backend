@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import viewsets, permissions, response, decorators, status, generics
 from rest_framework.views import APIView
@@ -260,12 +262,26 @@ def calculate_view(request, patient_id):
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
 
+    # Автоматическое получение пола
+    gender = patient.gender
+
+    # Автоматический расчет возраста
+    today = date.today()
+    age = today.year - patient.birth_date.year - (
+            (today.month, today.day) < (patient.birth_date.month, patient.birth_date.day)
+    )
+
+    # Добавляем данные в словарь для функции расчета и сохранения в историю
+    data['age'] = age
+    data['gender'] = gender
+
     result = run_calculation(data)
 
     history_entry = CalculationHistory.objects.create(
         doctor=request.user,
         patient=patient,
-        **{k: v for k, v in data.items()},
+        # В **data теперь входят и age, и gender
+        **data,
         score=result["score"],
         severity=result["severity"],
         recommendation=result["recommendation"],
@@ -278,6 +294,8 @@ def calculate_view(request, patient_id):
             "score": result["score"],
             "severity": result["severity"],
             "recommendation": result["recommendation"],
+            "calculated_age": age,
+            "gender": gender
         },
         status=status.HTTP_201_CREATED,
     )
