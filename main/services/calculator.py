@@ -1,12 +1,8 @@
 # services/calculator.py
 
-
 def calculate_score(data: dict, multiple_thyroid_nodules: bool) -> int:
-    """
-    Считает интегральный балл тяжести тиреотоксикоза.
-    """
+    """Считает интегральный балл тяжести тиреотоксикоза."""
     score = 0
-
     age = data["age"]
     st4 = data["st4"]
     ttg = data["ttg"]
@@ -23,11 +19,9 @@ def calculate_score(data: dict, multiple_thyroid_nodules: bool) -> int:
         score += 2
     elif age <= 49:
         score += 1
-    # >50 → 0
 
     # 2. Пол
-    if data["gender"] == "male":
-        score += 1
+    if data["gender"] == "male": score += 1
 
     # 3. сТ4 (нг/дл)
     if st4 <= 1.78:
@@ -73,7 +67,7 @@ def calculate_score(data: dict, multiple_thyroid_nodules: bool) -> int:
     else:
         score += 4
 
-    # 7. Стадия ЭОП (передаётся напрямую как балл)
+    # 7. Стадия ЭОП
     score += eop_stage
 
     # 8. Суточная доза тиреостатиков (мг)
@@ -99,14 +93,10 @@ def calculate_score(data: dict, multiple_thyroid_nodules: bool) -> int:
         score += 3
 
     # 10–13. Бинарные факторы
-    if data["ccc_complications"]:
-        score += 4
-    if data["compression_syndrome"]:
-        score += 4
-    if not data["slco1b1_polymorphism"]:
-        score += 4
-    if multiple_thyroid_nodules:
-        score += 4
+    if data["ccc_complications"]: score += 4
+    if data["compression_syndrome"]: score += 4
+    if not data["slco1b1_polymorphism"]: score += 4
+    if multiple_thyroid_nodules: score += 4
 
     return score
 
@@ -121,6 +111,10 @@ def get_severity(score: int) -> str:
 
 
 def get_recommendation(data: dict, score: int, mode: str) -> str:
+    severity = get_severity(score)
+    # Заголовок как в TS
+    summary = f"Интегральный показатель: {score} баллов.\nСтепень тяжести тиреотоксикоза: {severity}.\n\n"
+
     has_polymorphism = data["slco1b1_polymorphism"]
     is_light_or_medium = score <= 17
     is_medium_or_heavy = score >= 18
@@ -130,61 +124,34 @@ def get_recommendation(data: dict, score: int, mode: str) -> str:
     no_complications = not data["ccc_complications"]
     is_male = data["gender"] == "male"
 
+    advice = ""
     if mode == "dtz":
+        advice += "--- Рекомендация для ДТЗ ---\n"
         if has_polymorphism and is_light_or_medium and low_antibodies and no_complications:
-            method = "Субтотальная резекция ЩЖ (СРЩЖ)"
-            reasons = [
-                "наличие полиморфизма SLCO1B1",
-                "лёгкая/средняя тяжесть (0–17 баллов)",
-                "титр а/т к рТТГ ≤ 3,90 МЕ/л",
-                "отсутствие осложнений ССС",
-            ]
+            advice += "Субтотальная резекция ЩЖ (СРЩЖ). Обоснование: наличие полиморфизма SLCO1B1; лёгкая/средняя тяжесть (0–17 баллов); титр а/т к рТТГ ≤ 3,90 МЕ/л; отсутствие осложнений ССС."
         elif not has_polymorphism and is_medium_or_heavy and (high_antibodies or is_male):
-            method = "Тиреоидэктомия"
-            reasons = [
-                "отсутствие полиморфизма SLCO1B1",
-                "средняя/тяжёлая тяжесть (18–40 баллов)",
-            ]
-            if high_antibodies:
-                reasons.append("титр а/т к рТТГ > 3,90 МЕ/л")
-            if is_male:
-                reasons.append("мужской пол")
+            reasons = ["отсутствие полиморфизма SLCO1B1", "средняя/тяжёлая тяжесть (18–40 баллов)"]
+            if high_antibodies: reasons.append("титр а/т к рТТГ > 3,90 МЕ/л")
+            if is_male: reasons.append("мужской пол")
+            advice += f"Тиреоидэктомия. Обоснование: {'; '.join(reasons)}."
         else:
-            return "Требуется индивидуальная консультация специалиста для определения оптимального объёма операции."
-
-    else:  # mtz
+            advice += "Требуется индивидуальная консультация специалиста для определения оптимального объёма операции."
+    else:
+        advice += "--- Рекомендация для МТЗ ---\n"
         if has_polymorphism and is_light_or_medium and no_complications:
-            method = "Субтотальная резекция ЩЖ (СРЩЖ)"
-            reasons = [
-                "наличие полиморфизма SLCO1B1",
-                "лёгкая/средняя тяжесть (0–17 баллов)",
-                "отсутствие осложнений ССС",
-            ]
+            advice += "Субтотальная резекция ЩЖ (СРЩЖ). Обоснование: наличие полиморфизма SLCO1B1; лёгкая/средняя тяжесть (0–17 баллов); отсутствие осложнений ССС."
         elif not has_polymorphism and is_medium_or_heavy:
-            method = "Тиреоидэктомия"
-            reasons = [
-                "отсутствие полиморфизма SLCO1B1",
-                "средняя/тяжёлая тяжесть (18–40 баллов)",
-                "множественные узлы в обеих долях ЩЖ",
-            ]
+            advice += "Тиреоидэктомия. Обоснование: отсутствие полиморфизма SLCO1B1; средняя/тяжёлая тяжесть (18–40 баллов); множественные узлы в обеих долях ЩЖ."
         else:
-            return "Требуется индивидуальная консультация специалиста для определения оптимального объёма операции."
+            advice += "Требуется индивидуальная консультация специалиста для определения оптимального объёма операции."
 
-    reasons_str = "; ".join(reasons)
-    return f"{method}. Обоснование: {reasons_str}."
+    return summary + advice
 
 
 def run_calculation(data: dict) -> dict:
-    """Точка входа. Принимает валидированный dict, возвращает результат."""
     mode = data["mode"]
     multiple_thyroid_nodules = mode == "mtz"
-
     score = calculate_score(data, multiple_thyroid_nodules)
     severity = get_severity(score)
     recommendation = get_recommendation(data, score, mode)
-
-    return {
-        "score": score,
-        "severity": severity,
-        "recommendation": recommendation,
-    }
+    return {"score": score, "severity": severity, "recommendation": recommendation}

@@ -260,33 +260,30 @@ def calculate_view(request, patient_id):
 
     serializer = CalculateRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
 
-    # Автоматическое получение пола
-    gender = patient.gender
+    # Создаем копию валидированных данных
+    calc_data = serializer.validated_data.copy()
 
-    # Автоматический расчет возраста
     today = date.today()
     age = today.year - patient.birth_date.year - (
             (today.month, today.day) < (patient.birth_date.month, patient.birth_date.day)
     )
 
-    # Добавляем данные в словарь для функции расчета и сохранения в историю
-    data['age'] = age
-    data['gender'] = gender
+    calc_data['age'] = age
+    calc_data['gender'] = patient.gender
 
-    result = run_calculation(data)
+    result = run_calculation(calc_data)
 
     history_entry = CalculationHistory.objects.create(
         doctor=request.user,
         patient=patient,
-        # В **data теперь входят и age, и gender
-        **data,
+        **calc_data,
         score=result["score"],
         severity=result["severity"],
-        recommendation=result["recommendation"],
+        recommendation=result["recommendation"]
     )
 
+    # 5. Возвращаем ответ
     return response.Response(
         {
             "id": history_entry.id,
@@ -294,8 +291,6 @@ def calculate_view(request, patient_id):
             "score": result["score"],
             "severity": result["severity"],
             "recommendation": result["recommendation"],
-            "calculated_age": age,
-            "gender": gender
         },
         status=status.HTTP_201_CREATED,
     )
